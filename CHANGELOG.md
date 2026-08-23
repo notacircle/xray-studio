@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.0-alpha.5
+
+A crash on hover, and the reason it took a release to notice.
+
+### Fixed
+
+- **Hovering a `?` hint no longer takes the panel down.** The lookup that finds a
+  parameter's documentation builds a fresh object every call, and the layout effect that
+  positions the popup depended on it — so positioning the popup scheduled a render,
+  which produced a new object, which re-ran the effect. React stopped the loop the only
+  way it can, by throwing *Maximum update depth exceeded*, and the panel went with it.
+  Reported on Windows, but the loop was there on every platform.
+- **The crash report stays on screen.** Its boundary cleared itself whenever the
+  surrounding elements changed identity, which is every render of the parent — thirty a
+  second from the telemetry snapshot. The report appeared for a single frame: long
+  enough to look like a flicker, not long enough to read, and nowhere near long enough
+  to copy. It now clears when you switch tabs, which is what it was for.
+
+  These two are the same story. A crash on hover reached a release because the thing
+  built to report it was erasing itself faster than anyone could see it.
+
 ## 0.1.0-alpha.4
 
 Three things the interface was reporting wrongly, all of them about state that had moved
