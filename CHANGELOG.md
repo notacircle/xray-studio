@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.1.0-alpha.6
+
+Configs with `geoip:` / `geosite:` rules start now, and configs with nothing to probe
+explain themselves instead of looking dead.
+
+### Added
+
+- **Geodata profiles.** `geoip.dat` and `geosite.dat` are found where the app puts them,
+  not beside a binary inside a read-only bundle. A `geodata` button in the top bar lists
+  profiles; the active one is handed to Xray on every Start and Reload, and the choice
+  is remembered across restarts. The default profile points at
+  [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat); add
+  your own from URLs or from a `happ://routing/add/…` link, whose `Geoipurl` and
+  `Geositeurl` are read and everything else ignored. A profile may carry only one of the
+  two files.
+
+  Nothing is shipped and nothing is fetched on its own: the files come down the first
+  time you start a config that needs one the profile has not fetched, or when you press
+  Fetch or Update — about 27 MB for the default pair. Downloads verify against the
+  `.sha256sum` a GitHub release publishes beside each asset. The README's privacy section
+  spells this out as the second of the two things that reach the network.
+- **A validator finding for missing geodata.** Instead of the loader's
+  `failed to open geoip.dat > stat /Applications/…/Resources/geoip.dat`, both Validate
+  and Start report which rule references which file and point at the dialog. Each file
+  is checked separately.
+- **The rail lists every outbound the moment the config starts.** Rows used to appear
+  only once a probe or a dial mentioned a tag, so a config without an observatory showed
+  an empty rail. Seeded rows read *never probed*, which is the truth.
+- **Observe says why it is empty.** When the running config has no observatory or no
+  balancer, the tab states which, what that leaves blank, what still works on real
+  traffic, and where to add the missing block.
+
+### Fixed
+
+- **Every valid config failed to start** for the few hours between the two commits
+  above: a clean validation comes back with `diagnostics: null`, and the new geodata
+  step called `.filter` on it. Never released, caught by the demo config, noted here
+  because the fix — treat null as empty on one side, never send null on the other — is
+  the kind that stays.
+
 ## 0.1.0-alpha.5
 
 A crash on hover, and the reason it took a release to notice.
