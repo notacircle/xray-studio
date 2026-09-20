@@ -1,6 +1,6 @@
 {
   "name": "xray-studio",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "private": true,
   "description": "Desktop tool for testing Xray-core configs: live balancer decision tracing and realistic per-outbound fault injection",
   "scripts": {
