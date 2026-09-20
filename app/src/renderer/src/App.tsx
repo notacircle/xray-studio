@@ -13,6 +13,7 @@ import { LogPanel } from './panels/LogPanel'
 import { Build } from './panels/Build'
 import { Editor } from './panels/Editor'
 import { DocLangSwitch } from './components/DocLangSwitch'
+import { GeodataDialog } from './components/GeodataDialog'
 import { PanelBoundary } from './components/PanelBoundary'
 
 const TABS: { id: Tab; label: string }[] = [
@@ -49,6 +50,19 @@ export function App(): React.JSX.Element {
     openPastedConfig,
   } = useApp()
   const [pasting, setPasting] = useState(false)
+  const [geodataOpen, setGeodataOpen] = useState(false)
+  const [geoName, setGeoName] = useState<string | null>(null)
+  const [geoProgress, setGeoProgress] = useState('')
+
+  // The active profile's name for the topbar, refreshed whenever the dialog closes —
+  // that is the only place it changes.
+  useEffect(() => {
+    if (geodataOpen) return
+    void window.xraystudio.geodata.list().then((st) => {
+      setGeoName(st.profiles.find((p) => p.id === st.active)?.name ?? null)
+    })
+  }, [geodataOpen])
+  useEffect(() => window.xraystudio.geodata.onProgress(setGeoProgress), [])
 
   // The topbar reserves room for the macOS traffic lights, which do not exist elsewhere.
   useEffect(() => {
@@ -116,6 +130,15 @@ export function App(): React.JSX.Element {
           </span>
           {snap.xrayVersion && <span className="chip tiny">xray {snap.xrayVersion}</span>}
           <button
+            className="ghost geo-btn"
+            onClick={() => setGeodataOpen(true)}
+            title="geoip.dat / geosite.dat profile used by the next Start"
+          >
+            geodata
+            {geoName && <span className="dim"> · {geoName.split(' /')[0]}</span>}
+          </button>
+          {geoProgress && <span className="tiny warn mono">{geoProgress}</span>}
+          <button
             className={activeFaults > 0 ? 'danger' : ''}
             disabled={activeFaults === 0}
             onClick={() => void clearAllFaults()}
@@ -126,6 +149,8 @@ export function App(): React.JSX.Element {
           <DocLangSwitch />
         </div>
       </header>
+
+      {geodataOpen && <GeodataDialog onClose={() => setGeodataOpen(false)} />}
 
       {pasting && (
         <PasteConfig

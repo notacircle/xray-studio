@@ -505,3 +505,24 @@ export interface ProtocolSchema {
   registries: Record<string, SchemaRegistry>
   types: Record<string, SchemaStruct>
 }
+
+/* ── geodata profiles ─────────────────────────────────────────────────────── */
+
+export type GeoFile = 'geoip' | 'geosite'
+
+export interface GeoProfile {
+  id: string
+  name: string
+  /** Where it came from. The default cannot be edited; the others can be removed. */
+  source: 'default' | 'url' | 'happ'
+  geoipUrl?: string
+  geositeUrl?: string
+  addedAt: number
+  /** What has actually been fetched. Either may be absent — a profile need not carry both. */
+  files: Partial<Record<GeoFile, { bytes: number; at: number }>>
+}
+
+export interface GeoState {
+  active: string
+  profiles: GeoProfile[]
+}

@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -206,7 +207,14 @@ func convertStages(in []xraytrace.Stage) []trace.Stage {
 //
 // serial.LoadJSONConfig is used rather than core.LoadConfig because it reports
 // line/character positions for syntax errors, which the editor can point at.
-func (m *Manager) Validate(raw []byte) (diags []trace.Diagnostic, ok bool) {
+func (m *Manager) Validate(raw []byte, assetDir string) (diags []trace.Diagnostic, ok bool) {
+	SetAssetDir(assetDir)
+	// Before the loader: a missing .dat file makes LoadJSONConfig fail with a path deep
+	// inside the bundle, and that error would otherwise be all the user sees. This one
+	// names the rule and says where the fix is.
+	if geo := validate.Geodata(raw); len(geo) > 0 {
+		return geo, false
+	}
 	if _, err := serial.LoadJSONConfig(bytes.NewReader(raw)); err != nil {
 		return []trace.Diagnostic{{
 			Severity: "error",
@@ -229,7 +237,21 @@ func (m *Manager) Validate(raw []byte) (diags []trace.Diagnostic, ok bool) {
 }
 
 // Start loads the config and starts the instance.
-func (m *Manager) Start(raw []byte, path string) error {
+// SetAssetDir points the core at a directory of geoip.dat / geosite.dat.
+//
+// Xray resolves those through the XRAY_LOCATION_ASSET environment variable, read on
+// every open — it is not cached — so it can be switched between instance lifetimes
+// without restarting this process. Set on Start rather than at spawn because the
+// active profile is a UI choice that changes at runtime.
+func SetAssetDir(dir string) {
+	if dir == "" {
+		_ = os.Unsetenv("XRAY_LOCATION_ASSET")
+		return
+	}
+	_ = os.Setenv("XRAY_LOCATION_ASSET", dir)
+}
+
+func (m *Manager) Start(raw []byte, path, assetDir string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -238,6 +260,15 @@ func (m *Manager) Start(raw []byte, path string) error {
 	}
 
 	m.events.NextEpoch()
+	SetAssetDir(assetDir)
+	// Before the loader, for the same reason Validate does it: the loader's own error
+	// for a missing .dat file names a path inside the bundle and nothing else. This
+	// one names the rule and where the fix is, and it is what the UI banner shows.
+	if geo := validate.Geodata(raw); len(geo) > 0 {
+		msg := geo[0].Message + " " + geo[0].Detail
+		m.setState(StateError, msg)
+		return errors.New(msg)
+	}
 	m.configRaw, m.configPath = raw, path
 	m.setState(StateStarting, "")
 

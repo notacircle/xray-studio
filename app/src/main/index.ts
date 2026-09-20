@@ -7,6 +7,7 @@ import { accessSync, appendFileSync, constants, mkdirSync, readFileSync, writeFi
 import { EventStore } from './eventStore'
 import { Sidecar, sidecarPath } from './sidecar'
 import * as ai from './ai'
+import * as geodata from './geodata'
 
 // Electron's main-process stdout is not reliably captured when the app is launched
 // detached, which makes "the window never appeared" impossible to diagnose. Write a
@@ -183,6 +184,40 @@ function createWindow(): BrowserWindow {
   return w
 }
 
+/**
+ * The asset directory for a start, fetching the active profile's files first when the
+ * config needs one it does not have yet.
+ *
+ * Deciding by asking the validator, not by guessing: it reports exactly which of the
+ * two files a config references and lacks, so a geosite-only config never triggers a
+ * 16 MB geoip download it would not use. The fetch is the user's action — they pressed
+ * Start on a config that asks for it — and it is the only way a download ever begins.
+ */
+async function geodataForStart(sc: Sidecar, path: string): Promise<string> {
+  const dir = await geodata.activeDir()
+  const { diagnostics } = await sc.validate(path, dir)
+  const missing = (diagnostics as { code?: string; message?: string }[])
+    .filter((d) => d.code === 'geodata_missing')
+    .map((d) => (/geosite\.dat/.test(d.message ?? '') ? 'geosite' : 'geoip') as 'geoip' | 'geosite')
+  if (missing.length === 0) return dir
+
+  const profile = await geodata.active()
+  const fetchable = missing.filter((f) => (f === 'geoip' ? profile.geoipUrl : profile.geositeUrl))
+  if (fetchable.length === 0) return dir // nothing to fetch from; the validator's error stands
+
+  win?.webContents.send('geodata:progress', `fetching ${fetchable.join(' and ')} for "${profile.name}"…`)
+  try {
+    await geodata.download(profile.id, (msg) => win?.webContents.send('geodata:progress', msg))
+    win?.webContents.send('geodata:progress', '')
+  } catch (e) {
+    win?.webContents.send('geodata:progress', '')
+    trace(`geodata fetch failed: ${(e as Error).message}`)
+    // Fall through: the start will fail with the validator's own message, which now
+    // also says the fetch was attempted.
+  }
+  return dir
+}
+
 async function ensureSidecar(): Promise<Sidecar> {
   if (sidecar?.running) return sidecar
 
@@ -292,20 +327,18 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('instance:start', async (_e, path: string) => {
-    const sc = await ensureSidecar()
+    let sc = await ensureSidecar()
+    const assets = await geodataForStart(sc, path)
     // Reload = a fresh process. Stopping the instance in place would leave the burst
     // observatory's probe timers running against a config that no longer exists.
     if (currentConfig) {
       await sc.stop()
       sidecar = null
-      const fresh = await ensureSidecar()
-      currentConfig = path
-      watchConfig(path)
-      return fresh.startConfig(path)
+      sc = await ensureSidecar()
     }
     currentConfig = path
     watchConfig(path)
-    return sc.startConfig(path)
+    return sc.startConfig(path, assets)
   })
 
   ipcMain.handle('instance:stop', async () => {
@@ -324,13 +357,29 @@ function registerIpc(): void {
   // Validate text that has not been saved yet, so the Build tab can check a draft.
   ipcMain.handle('instance:validateText', async (_e, text: string) => {
     const sc = await ensureSidecar()
-    return sc.validateText(text)
+    return sc.validateText(text, await geodata.activeDir())
   })
 
   ipcMain.handle('instance:validate', async (_e, path: string) => {
     const sc = await ensureSidecar()
-    return sc.validate(path)
+    return sc.validate(path, await geodata.activeDir())
   })
+
+  /* ── geodata profiles ──────────────────────────────────────────────────── */
+  ipcMain.handle('geodata:list', () => geodata.list())
+  ipcMain.handle('geodata:select', (_e, id: string) => geodata.select(id))
+  ipcMain.handle('geodata:remove', (_e, id: string) => geodata.remove(id))
+  ipcMain.handle(
+    'geodata:add',
+    (_e, input: { name: string; geoipUrl?: string; geositeUrl?: string }) =>
+      geodata.add({ ...input, source: 'url' }),
+  )
+  ipcMain.handle('geodata:addHapp', (_e, link: string) =>
+    geodata.add({ ...geodata.parseHappRouting(link), source: 'happ' }),
+  )
+  ipcMain.handle('geodata:download', (_e, id: string) =>
+    geodata.download(id, (msg) => win?.webContents.send('geodata:progress', msg)),
+  )
 
   ipcMain.handle('faults:set', async (_e, rules: FaultRule[]) => {
     const sc = await ensureSidecar()
@@ -565,9 +614,10 @@ void app.whenReady().then(async () => {
   if (auto) {
     try {
       const sc = await ensureSidecar()
+      const assets = await geodataForStart(sc, auto)
       currentConfig = auto
       watchConfig(auto)
-      await sc.startConfig(auto)
+      await sc.startConfig(auto, assets)
       win.webContents.send('config:opened', auto)
     } catch (err) {
       store.setSidecar(false, null, (err as Error).message)

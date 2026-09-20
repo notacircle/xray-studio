@@ -37,6 +37,7 @@ func main() {
 	var (
 		showVersion = flag.Bool("version", false, "print the linked Xray-core version and exit")
 		configPath  = flag.String("config", "", "config to load and start immediately")
+		assetDir    = flag.String("assets", "", "directory holding geoip.dat / geosite.dat for --config")
 		queueSize   = flag.Int("queue", trace.DefaultQueueSize, "event queue size")
 		idleTimeout = flag.Duration("idle-timeout", 0, "exit if no control client connects within this period (0 = never)")
 	)
@@ -84,7 +85,7 @@ func main() {
 		if err != nil {
 			fatal("read config: %v", err)
 		}
-		if err := mgr.Start(raw, *configPath); err != nil {
+		if err := mgr.Start(raw, *configPath, *assetDir); err != nil {
 			// Not fatal: the UI wants to display the error and let the user fix the
 			// config, which is the entire point of the tool.
 			warn("start failed: %v", err)

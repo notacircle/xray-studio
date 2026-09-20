@@ -50,6 +50,20 @@ Where a parameter has no official documentation, the app falls back to the field
 source comment from `infra/conf` and **labels it as such** in the UI, so generated text
 is never presented as documentation.
 
+## Geodata — Loyalsoldier/v2ray-rules-dat
+
+`geoip.dat` and `geosite.dat` are **not shipped** with the application. The default
+geodata profile points at the release assets of
+[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat), which
+are fetched to the user's own data directory on their first start of a config that needs
+them, or when they press Update. The files never enter this repository or its release
+artefacts.
+
+That project's build tooling is GPL-3.0. The data it compiles comes from several sources
+under their own terms, including MaxMind's GeoLite2 (CC BY-SA 4.0) and community domain
+lists; see its README for the full list. Users who add their own profiles from a URL or
+a `happ://` link are fetching whatever that URL serves, under whatever terms it carries.
+
 ## npm and Go dependencies
 
 Ordinary transitive dependencies, under their own licenses (predominantly MIT, BSD and

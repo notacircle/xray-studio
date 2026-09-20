@@ -75,7 +75,7 @@ func TestFailoverOnInjectedFault(t *testing.T) {
 	mgr := instance.New(bus, t.TempDir())
 	defer mgr.Close()
 
-	if err := mgr.Start([]byte(cfg), "e2e"); err != nil {
+	if err := mgr.Start([]byte(cfg), "e2e", ""); err != nil {
 		t.Fatalf("start: %v", err)
 	}
 

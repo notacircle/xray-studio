@@ -226,8 +226,8 @@ export class Sidecar extends EventEmitter {
     return parsed as T
   }
 
-  startConfig(path: string) {
-    return this.call<{ state: unknown }>('POST', '/v1/start', { path })
+  startConfig(path: string, assetDir: string) {
+    return this.call<{ state: unknown }>('POST', '/v1/start', { path, assetDir })
   }
 
   stopConfig() {
@@ -235,12 +235,12 @@ export class Sidecar extends EventEmitter {
   }
 
   /** Validates config TEXT that is not on disk yet. */
-  validateText(raw: string) {
-    return this.call<{ ok: boolean; diagnostics: unknown[] }>('POST', '/v1/config', { raw })
+  validateText(raw: string, assetDir: string) {
+    return this.call<{ ok: boolean; diagnostics: unknown[] }>('POST', '/v1/config', { raw, assetDir })
   }
 
-  validate(path: string) {
-    return this.call<{ ok: boolean; diagnostics: unknown[] }>('POST', '/v1/config', { path })
+  validate(path: string, assetDir: string) {
+    return this.call<{ ok: boolean; diagnostics: unknown[] }>('POST', '/v1/config', { path, assetDir })
   }
 
   setFaults(rules: FaultRule[]) {

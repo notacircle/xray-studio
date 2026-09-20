@@ -152,6 +152,12 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 type configRequest struct {
 	Path string `json:"path,omitempty"`
 	Raw  string `json:"raw,omitempty"`
+	// AssetDir is where geoip.dat and geosite.dat are read from for this instance.
+	// The app owns geodata the way it owns log paths: a profile is chosen in the UI,
+	// and the core is pointed at that profile's directory rather than at wherever the
+	// sidecar binary happens to live — which in a packaged app is a read-only bundle
+	// with no .dat files in it at all.
+	AssetDir string `json:"assetDir,omitempty"`
 }
 
 // load resolves a request to raw config bytes, from an inline body or a file path.
@@ -177,7 +183,7 @@ func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	diags, ok := s.mgr.Validate(raw)
+	diags, ok := s.mgr.Validate(raw, req.AssetDir)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": ok, "diagnostics": diags})
 }
 
@@ -192,7 +198,7 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	if err := s.mgr.Start(raw, path); err != nil {
+	if err := s.mgr.Start(raw, path, req.AssetDir); err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
 			"error": err.Error(),
 			"state": s.mgr.State(),

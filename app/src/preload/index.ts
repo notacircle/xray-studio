@@ -9,6 +9,7 @@ import type {
   SimResponse,
   SelfCheckReport,
   Snapshot,
+  GeoState,
 } from '@shared/events'
 
 /**
@@ -60,6 +61,22 @@ const api = {
   docs: (lang: string): Promise<DocBundle | null> => ipcRenderer.invoke('docs:bundle', lang),
 
   selfCheck: (): Promise<SelfCheckReport> => ipcRenderer.invoke('selfcheck:run'),
+
+  /* geoip.dat / geosite.dat profiles. See main/geodata.ts. */
+  geodata: {
+    list: (): Promise<GeoState> => ipcRenderer.invoke('geodata:list'),
+    select: (id: string): Promise<GeoState> => ipcRenderer.invoke('geodata:select', id),
+    remove: (id: string): Promise<GeoState> => ipcRenderer.invoke('geodata:remove', id),
+    add: (input: { name: string; geoipUrl?: string; geositeUrl?: string }): Promise<GeoState> =>
+      ipcRenderer.invoke('geodata:add', input),
+    addHapp: (link: string): Promise<GeoState> => ipcRenderer.invoke('geodata:addHapp', link),
+    download: (id: string): Promise<GeoState> => ipcRenderer.invoke('geodata:download', id),
+    onProgress: (cb: (msg: string) => void): (() => void) => {
+      const h = (_e: unknown, msg: string): void => cb(msg)
+      ipcRenderer.on('geodata:progress', h)
+      return () => ipcRenderer.off('geodata:progress', h)
+    },
+  },
 
   simulate: (req: SimRequest): Promise<SimResponse> => ipcRenderer.invoke('sim:run', req),
 

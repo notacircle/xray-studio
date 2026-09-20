@@ -35,7 +35,17 @@ uploaded, registered or sent anywhere to be processed. The only traffic the tool
 is the traffic your own config describes — it runs Xray against the servers you listed,
 which is the entire point of it.
 
-**One exception, and it is yours to switch on.** The AI assistant sends what you ask it,
+**Two exceptions, both yours to trigger.** Geodata: a config with `geoip:` or `geosite:`
+rules needs `geoip.dat` / `geosite.dat`, which are not in the download. The first time
+you start such a config, the active geodata profile fetches the files it is missing —
+by default from
+[Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat) on
+GitHub, about 27 MB — and never again unless you press Update. You can add your own
+profiles from URLs or from a `happ://routing/add/…` link, keep as many as you like, and
+the one you pick is remembered. Nothing is fetched for a config that does not reference
+geodata.
+
+**The other exception is the AI assistant, and it is switched off until you switch it on.** It sends what you ask it,
 with an API key you supply, to the provider you chose. It does nothing until you enter a
 key, it lists exactly what it will include, and it can replace UUIDs, passwords and
 Reality keys with markers of the same length before anything is sent. Never open it and

@@ -1237,3 +1237,17 @@ button.ghost.on { border-color: var(--bad); color: var(--bad); }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* ── geodata profiles ─────────────────────────────────────────────────────── */
+.geo-btn { font-size: 12px; padding: 3px 9px; }
+.modal.geodata { max-width: 680px; width: min(680px, 100% - 32px); }
+.geo-list { border: 1px solid var(--border); border-radius: 6px; margin: 10px 0; overflow: hidden; }
+.geo-row { border-bottom: 1px solid var(--border); display: grid; gap: 6px 14px; grid-template-columns: 1fr auto; padding: 9px 12px; }
+.geo-row:last-child { border-bottom: 0; }
+.geo-row.sel { background: var(--bg-raised); }
+.geo-pick { cursor: pointer; }
+.geo-files { display: flex; flex-wrap: wrap; gap: 4px 16px; grid-column: 1; }
+.geo-actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.geo-add { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
+.geo-form { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.geo-form input, .geo-form textarea { width: 100%; }
