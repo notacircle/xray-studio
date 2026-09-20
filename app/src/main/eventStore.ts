@@ -156,6 +156,12 @@ export class EventStore {
       case EventType.State: {
         this.state = ev as StateEvent
         this.configPath = (ev as StateEvent).config_path ?? this.configPath
+        // List every outbound the config declares from the moment it starts. Rows used
+        // to appear only once telemetry mentioned a tag — a probe or a dial — so a
+        // config with no observatory and no traffic yet showed an empty rail, and an
+        // empty rail reads as a broken app. Seeded rows carry alive=null, which the UI
+        // already renders as "never probed", which is exactly the truth.
+        for (const tag of (ev as StateEvent).shape?.outbound_tags ?? []) this.outbound(tag)
         break
       }
       case EventType.ProbeStart: {

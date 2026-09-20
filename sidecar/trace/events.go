@@ -19,7 +19,7 @@ const (
 	TypeLog          = "log"
 	TypeFault        = "fault"
 	TypeConnPoisoned = "conn_poisoned"
-	TypeLogPaths = "log_paths"
+	TypeLogPaths     = "log_paths"
 	TypeBusStats     = "bus_stats"
 )
 
@@ -51,6 +51,23 @@ type State struct {
 	ConfigPath string `json:"config_path,omitempty"`
 	Err        string `json:"err,omitempty"`
 	UptimeMs   int64  `json:"uptime_ms"`
+	// Shape describes what the running config contains, so the UI can say what it
+	// will and will not be able to show for it — see ConfigShape.
+	Shape *ConfigShape `json:"shape,omitempty"`
+}
+
+// ConfigShape is the part of a config that decides which panels have anything to say.
+//
+// Most of this tool is about balancers and the observatory that feeds them. A config
+// with neither is perfectly valid and runs fine, and every probe-driven panel then sits
+// empty — which reads as "nothing works" unless something says why. This is read from
+// the raw JSON at start, once, so the rail can list the outbounds before any of them has
+// been dialled and the Observe tab can explain an empty chart instead of showing one.
+type ConfigShape struct {
+	OutboundTags   []string `json:"outbound_tags"`
+	BalancerTags   []string `json:"balancer_tags,omitempty"`
+	HasObservatory bool     `json:"has_observatory"`
+	HasBalancer    bool     `json:"has_balancer"`
 }
 
 // Diagnostic is one validation finding about the config.

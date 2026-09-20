@@ -196,7 +196,10 @@ function createWindow(): BrowserWindow {
 async function geodataForStart(sc: Sidecar, path: string): Promise<string> {
   const dir = await geodata.activeDir()
   const { diagnostics } = await sc.validate(path, dir)
-  const missing = (diagnostics as { code?: string; message?: string }[])
+  // A clean config comes back with diagnostics: null — Go's nil slice — and this used
+  // to call .filter on it, which aborted the start of every VALID config. Caught by
+  // the demo config, which is the one thing that should never fail to start.
+  const missing = ((diagnostics ?? []) as { code?: string; message?: string }[])
     .filter((d) => d.code === 'geodata_missing')
     .map((d) => (/geosite\.dat/.test(d.message ?? '') ? 'geosite' : 'geoip') as 'geoip' | 'geosite')
   if (missing.length === 0) return dir

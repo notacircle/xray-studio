@@ -25,8 +25,43 @@ export function Observe(): React.JSX.Element {
   const keys = sortKeysFor(active?.strategy ?? '')
   const evalEvent = selectedBalancer ? (snap.lastEvals[selectedBalancer] ?? null) : null
 
+  const shape = snap.state?.shape
+  const running = snap.state?.state === 'running'
+
   return (
     <div className="observe">
+      {/* A config with no observatory and no balancer is valid, runs fine, and gives
+          every probe-driven panel nothing to show. Left unexplained, that reads as the
+          application not working — which is precisely how it was reported. So say what
+          the config lacks, what still works, and where to add the missing part. */}
+      {running && shape && (!shape.has_observatory || !shape.has_balancer) && (
+        <section className="panel note info shape-note">
+          <strong>
+            {!shape.has_observatory && !shape.has_balancer
+              ? 'This config has no observatory and no balancer.'
+              : !shape.has_observatory
+                ? 'This config has a balancer but no observatory.'
+                : 'This config has an observatory but no balancer.'}
+          </strong>{' '}
+          {!shape.has_observatory && (
+            <>
+              Nothing probes the outbounds, so the RTT chart, the probe lane and this table stay empty
+              and every outbound reads as <em>never probed</em>.{' '}
+            </>
+          )}
+          {!shape.has_balancer && (
+            <>
+              No balancer runs, so there are no decisions to trace here or in What-if.{' '}
+            </>
+          )}
+          It is running, and the rest works on real traffic: send connections through an inbound
+          and they show up in <strong>Faults</strong> evidence and the <strong>Log</strong>;{' '}
+          <strong>Graph</strong>, <strong>Editor</strong> and <strong>Validate</strong> read the config
+          itself. To see the balancer side, add an{' '}
+          <code className="inline-code">observatory</code> and a{' '}
+          <code className="inline-code">routing.balancers</code> entry — the Graph tab can add both.
+        </section>
+      )}
       <RttTimeline />
 
       <section className="panel">

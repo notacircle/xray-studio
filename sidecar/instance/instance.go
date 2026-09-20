@@ -11,6 +11,7 @@ package instance
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"strings"
@@ -42,6 +43,7 @@ const (
 
 // Manager owns the instance and everything attached to it.
 type Manager struct {
+	shape  *trace.ConfigShape
 	faults *fault.Store
 	reg    *fault.Registry
 	dialer *fault.Dialer
@@ -224,6 +226,10 @@ func (m *Manager) Validate(raw []byte, assetDir string) (diags []trace.Diagnosti
 	}
 	// Parsing cleanly is necessary but nowhere near sufficient: the interesting
 	// failures are configs Xray accepts and then does not act on.
+	//
+	// Non-nil from the start, so a clean config serialises as [] rather than null.
+	// Every consumer of this list is written as though it were a list.
+	diags = []trace.Diagnostic{}
 	diags = append(diags, validate.UnknownKeys(raw)...)
 	diags = append(diags, validate.Semantic(raw)...)
 
@@ -270,6 +276,7 @@ func (m *Manager) Start(raw []byte, path, assetDir string) error {
 		return errors.New(msg)
 	}
 	m.configRaw, m.configPath = raw, path
+	m.shape = readShape(raw)
 	m.setState(StateStarting, "")
 
 	// The app owns the log destinations — see logpaths.go. A log path is a property of
@@ -414,7 +421,7 @@ func (m *Manager) State() trace.State {
 }
 
 func (m *Manager) stateLocked() trace.State {
-	s := trace.State{State: m.state, ConfigPath: m.configPath, Err: m.lastErr}
+	s := trace.State{State: m.state, ConfigPath: m.configPath, Err: m.lastErr, Shape: m.shape}
 	if m.state == StateRunning {
 		s.UptimeMs = time.Since(m.startedAt).Milliseconds()
 	}
@@ -431,4 +438,38 @@ func (m *Manager) setState(state, errText string) {
 func (m *Manager) Close() {
 	_ = m.Stop()
 	fault.Uninstall()
+}
+
+// readShape summarises a config for the UI. Loose JSON on purpose: this runs on
+// configs that may go on to fail the real loader, and it should still describe them.
+func readShape(raw []byte) *trace.ConfigShape {
+	var doc struct {
+		Outbounds []struct {
+			Tag string `json:"tag"`
+		} `json:"outbounds"`
+		Observatory      json.RawMessage `json:"observatory"`
+		BurstObservatory json.RawMessage `json:"burstObservatory"`
+		Routing          struct {
+			Balancers []struct {
+				Tag string `json:"tag"`
+			} `json:"balancers"`
+		} `json:"routing"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	sh := &trace.ConfigShape{OutboundTags: []string{}}
+	for _, o := range doc.Outbounds {
+		if o.Tag != "" {
+			sh.OutboundTags = append(sh.OutboundTags, o.Tag)
+		}
+	}
+	for _, b := range doc.Routing.Balancers {
+		if b.Tag != "" {
+			sh.BalancerTags = append(sh.BalancerTags, b.Tag)
+		}
+	}
+	sh.HasBalancer = len(doc.Routing.Balancers) > 0
+	sh.HasObservatory = len(doc.Observatory) > 0 || len(doc.BurstObservatory) > 0
+	return sh
 }

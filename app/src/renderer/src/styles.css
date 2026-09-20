@@ -1251,3 +1251,8 @@ button.ghost.on { border-color: var(--bad); color: var(--bad); }
 .geo-add { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 12px; }
 .geo-form { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
 .geo-form input, .geo-form textarea { width: 100%; }
+
+/* The "this config has nothing to probe" note on Observe. A panel, not a banner, so it
+   sits in the flow above the chart it explains rather than across the top of the app. */
+.shape-note { line-height: 1.55; }
+.shape-note strong { color: var(--fg); }

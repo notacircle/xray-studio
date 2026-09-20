@@ -38,6 +38,15 @@ export interface StateEvent extends Envelope {
   config_path?: string
   err?: string
   uptime_ms: number
+  /** What the running config contains — decides which panels can show anything. */
+  shape?: ConfigShape
+}
+
+export interface ConfigShape {
+  outbound_tags: string[]
+  balancer_tags?: string[]
+  has_observatory: boolean
+  has_balancer: boolean
 }
 
 export interface Diagnostic {
